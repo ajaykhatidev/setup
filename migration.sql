@@ -16,14 +16,8 @@ CREATE TABLE IF NOT EXISTS leads (
   inserted_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Enable Row Level Security (RLS)
-ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
-
--- Create policy to allow the service_role key to do everything
--- (The backend uses the service_role key)
-CREATE POLICY "Service role can do everything" ON leads
-  USING (true)
-  WITH CHECK (true);
+-- Disable Row Level Security (RLS)
+ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
 
 -- Optional: Create an index for faster lookups by lead_id
 CREATE INDEX IF NOT EXISTS idx_leads_lead_id ON leads (lead_id);

@@ -1,21 +1,23 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const https = require("https"); // Added for keep-alive
+const axios = require("axios");
 require("./config/db"); // Initialize Supabase
 const app = express();
 
 // Keep-alive logic for Render free tier (ping every 13 minutes)
-const RENDER_URL = process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.replace("/webhook", "") : null;
+// Using RENDER_EXTERNAL_URL if available, otherwise fallback to WEBHOOK_URL
+const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || (process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.replace("/webhook", "") : null);
 
-if (RENDER_URL) {
-    setInterval(() => {
-        console.log("⏱️ Sending keep-alive ping...");
-        https.get(`${RENDER_URL}/health`, (res) => {
-            console.log(`📡 Keep-alive status: ${res.statusCode === 200 ? "Active" : "Error"}`);
-        }).on('error', (err) => {
-            console.error("❌ Keep-alive error:", err.message);
-        });
+if (RENDER_EXTERNAL_URL) {
+    setInterval(async () => {
+        try {
+            console.log("⏱️ Sending keep-alive ping...");
+            const response = await axios.get(`${RENDER_EXTERNAL_URL}/health`);
+            console.log(`📡 Keep-alive status: ${response.status === 200 ? "Active" : `Unexpected Status (${response.status})`}`);
+        } catch (err) {
+            console.error("❌ Keep-alive error:", err.response ? `Status ${err.response.status}` : err.message);
+        }
     }, 13 * 60 * 1000); // 13 minutes
 }
 
