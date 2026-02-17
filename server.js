@@ -39,11 +39,9 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`🚀 Meta Webhook Server running on port ${PORT}`);
-        console.log(`🔗 Webhook URL: /webhook`);
-    });
-}
+app.listen(PORT, () => {
+    console.log(`🚀 Meta Webhook Server running on port ${PORT}`);
+    console.log(`🔗 Webhook URL: /webhook`);
+});
 
 module.exports = app;
