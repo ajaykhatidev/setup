@@ -6,8 +6,14 @@ const supabase = require("../config/db");
  * @param {string} leadId 
  */
 exports.fetchLead = async (leadId) => {
+    // Skip fetching if it's the dummy Meta test lead ID
+    if (leadId === "444444444444") {
+        console.log("ℹ️ Received a dummy Meta test lead ID. Graph API fetch skipped as expected.");
+        return null;
+    }
+
     try {
-        const apiVersion = process.env.GRAPH_API_VERSION || "v19.0";
+        const apiVersion = process.env.GRAPH_API_VERSION || "v24.0";
         const response = await axios.get(
             `https://graph.facebook.com/${apiVersion}/${leadId}`,
             {
