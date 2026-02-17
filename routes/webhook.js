@@ -29,6 +29,7 @@ router.get("/", (req, res) => {
 router.post("/", async (req, res) => {
     try {
         const { body } = req;
+        console.log("📥 Incoming Webhook POST:", JSON.stringify(body, null, 2));
 
         // Check if it's a page event
         if (body.object === "page") {
