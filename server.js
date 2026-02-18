@@ -1,48 +1,32 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const axios = require("axios");
-require("./config/db"); // Initialize Supabase
+
 const app = express();
 
-// Keep-alive logic for Render free tier (ping every 13 minutes)
-// Using RENDER_EXTERNAL_URL if available, otherwise fallback to WEBHOOK_URL
-const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || (process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.replace("/webhook", "") : null);
-
-if (RENDER_EXTERNAL_URL) {
-    setInterval(async () => {
-        try {
-            console.log("⏱️ Sending keep-alive ping...");
-            const response = await axios.get(`${RENDER_EXTERNAL_URL}/health`);
-            console.log(`📡 Keep-alive status: ${response.status === 200 ? "Active" : `Unexpected Status (${response.status})`}`);
-        } catch (err) {
-            console.error("❌ Keep-alive error:", err.response ? `Status ${err.response.status}` : err.message);
-        }
-    }, 13 * 60 * 1000); // 13 minutes
-}
-
-// Middleware
+// Security & Middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
+// RENDER Keep-Alive (Optional, keeps free tier active)
+const RENDER_EXTERNAL_URL = process.env.RENDER_EXTERNAL_URL || (process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.replace("/webhook", "") : null);
+if (RENDER_EXTERNAL_URL) {
+    setInterval(async () => {
+        try {
+            console.log("⏱️ Sending keep-alive ping...");
+            await axios.get(`${RENDER_EXTERNAL_URL}/health`);
+        } catch (err) {
+            // Ignore connection errors for keep-alive
+        }
+    }, 14 * 60 * 1000);
+}
+
 // Routes
 app.use("/webhook", require("./routes/webhook"));
-
-app.get("/api/leads", async (req, res) => {
-    try {
-        const supabase = require("./config/db");
-        const { data, error } = await supabase
-            .from("leads")
-            .select("*")
-            .order("created_time", { ascending: false });
-
-        if (error) throw error;
-        res.json(data);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 // Health Check
 app.get("/health", (req, res) => {
@@ -57,8 +41,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🚀 Meta Webhook Server running on port ${PORT}`);
-    console.log(`🔗 Webhook URL: /webhook`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔗 Listening for webhooks at /webhook`);
 });
 
 module.exports = app;

@@ -9,7 +9,18 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Check connection (Try to fetch a single row or just log initialization)
-console.log("✅ Supabase Client initialized and Database connected.");
+// Check connection (Try to fetch a single row to verify credentials)
+(async () => {
+    try {
+        const { count, error } = await supabase.from('leads').select('*', { count: 'exact', head: true });
+        if (error) {
+            console.error("❌ Supabase Connection Failed:", error.message);
+        } else {
+            console.log(`✅ Supabase Connected! Current lead count: ${count}`);
+        }
+    } catch (err) {
+        console.error("❌ Supabase Connection Exception:", err.message);
+    }
+})();
 
 module.exports = supabase;

@@ -43,18 +43,26 @@ exports.fetchLead = async (leadId) => {
         };
 
         // Save to Supabase (Upsert)
+        console.log(`💾 Attempting to save lead ${formattedLead.lead_id} to Supabase...`);
+
         const { data, error } = await supabase
             .from('leads')
             .upsert(formattedLead, { onConflict: 'lead_id' })
             .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error("❌ Supabase Insert Error:", JSON.stringify(error, null, 2));
+            throw error;
+        }
 
-        console.log("💾 Lead saved to Supabase:", data[0]?.id || formattedLead.lead_id);
+        console.log("✅ Lead successfully saved to Supabase (ID):", data[0]?.id);
 
         return data[0];
     } catch (error) {
         console.error("❌ Error processing lead:", error.message);
+        if (error.response) {
+            console.error("   API Response:", JSON.stringify(error.response.data, null, 2));
+        }
         throw error;
     }
 };

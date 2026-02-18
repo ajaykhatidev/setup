@@ -3,21 +3,17 @@
 
 CREATE TABLE IF NOT EXISTS leads (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  lead_id TEXT UNIQUE NOT NULL,
-  page_id TEXT,
-  form_id TEXT,
-  ad_id TEXT,
-  adgroup_id TEXT,
-  campaign_id TEXT,
+  leadgen_id TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  phone_number TEXT,
+  email TEXT,
   created_time TIMESTAMPTZ,
-  fields JSONB DEFAULT '{}'::jsonb,
-  raw_data JSONB DEFAULT '{}'::jsonb,
-  status TEXT DEFAULT 'new',
+  raw_payload JSONB DEFAULT '{}'::jsonb,
   inserted_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Disable Row Level Security (RLS)
+-- Disable Row Level Security (RLS) as requested/implied for service role usage or simple access
 ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
 
--- Optional: Create an index for faster lookups by lead_id
-CREATE INDEX IF NOT EXISTS idx_leads_lead_id ON leads (lead_id);
+-- Index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_leads_leadgen_id ON leads (leadgen_id);

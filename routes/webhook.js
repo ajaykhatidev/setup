@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { fetchLead } = require("../services/leadService");
+const { getLeadDetails } = require("../services/facebookService");
+const { saveLead } = require("../services/supabaseService");
 
 /**
- * Webhook Verification (GET)
- * Required by Meta to verify the endpoint
+ * GET /webhook
+ * Verification endpoint for Facebook
  */
 router.get("/", (req, res) => {
     const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
@@ -13,47 +14,67 @@ router.get("/", (req, res) => {
     const token = req.query["hub.verify_token"];
     const challenge = req.query["hub.challenge"];
 
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-        console.log("✅ Webhook verified!");
-        return res.status(200).send(challenge);
+    if (mode && token) {
+        if (mode === "subscribe" && token === VERIFY_TOKEN) {
+            console.log("✅ Webhook verified!");
+            res.status(200).send(challenge);
+        } else {
+            console.warn("❌ Webhook verification failed: Invalid token.");
+            res.sendStatus(403);
+        }
+    } else {
+        res.sendStatus(400);
     }
-
-    console.warn("❌ Webhook verification failed.");
-    res.sendStatus(403);
 });
 
 /**
- * Handle Webhook Events (POST)
- * Receives leadgen notifications
+ * POST /webhook
+ * Handle incoming leadgen events
  */
 router.post("/", async (req, res) => {
     try {
-        const { body } = req;
-        console.log("📥 Incoming Webhook POST:", JSON.stringify(body, null, 2));
+        // 1. Immediately acknowledge the request
+        res.sendStatus(200);
 
-        // Check if it's a page event
+        const body = req.body;
+        console.log("📥 Received Webhook Event");
+
+        // 2. Validate object type
         if (body.object === "page") {
+            // Iterate over entries
+            if (!body.entry) return;
+
             for (const entry of body.entry) {
+                // Iterate over changes
+                if (!entry.changes) continue;
+
                 for (const change of entry.changes) {
                     if (change.field === "leadgen") {
-                        const leadId = change.value.leadgen_id;
-                        const pageId = change.value.page_id;
-                        const formId = change.value.form_id;
+                        const leadgenId = change.value.leadgen_id;
+                        console.log(`📩 Processing LeadGen ID: ${leadgenId}`);
 
-                        console.log(`📩 New Lead detected! Lead ID: ${leadId}, Page: ${pageId}, Form: ${formId}`);
+                        // 3. Process asynchronously
+                        // We do not await here to ensure the response to FB was fast (already sent)
+                        // but we catch errors to log them.
+                        (async () => {
+                            try {
+                                // Fetch details from FB
+                                const leadDetails = await getLeadDetails(leadgenId);
 
-                        // Process the lead asynchronously
-                        fetchLead(leadId).catch(err => console.error("Error in background fetchLead:", err));
+                                // Save to Supabase
+                                const savedLead = await saveLead(leadDetails);
+                                console.log(`✅ Lead saved successfully: ${savedLead.id}`);
+                            } catch (err) {
+                                console.error(`❌ Failed to process lead ${leadgenId}:`, err.message);
+                            }
+                        })();
                     }
                 }
             }
-            return res.sendStatus(200);
         }
-
-        res.sendStatus(404);
     } catch (err) {
-        console.error("❌ Webhook Error:", err.message);
-        res.sendStatus(500);
+        console.error("❌ Webhook Handling Error:", err.message);
+        // Note: Response is already sent, so we just log.
     }
 });
 
