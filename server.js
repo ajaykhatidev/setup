@@ -16,6 +16,22 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Optional keep-alive ping for platforms that sleep on inactivity.
+const keepAliveBaseUrl =
+    process.env.RENDER_EXTERNAL_URL ||
+    (process.env.WEBHOOK_URL ? process.env.WEBHOOK_URL.replace(/\/webhook\/?$/, "") : null);
+
+if (keepAliveBaseUrl) {
+    setInterval(async () => {
+        try {
+            await fetch(`${keepAliveBaseUrl}/health`);
+            console.log("⏱️ Keep-alive ping sent");
+        } catch (err) {
+            console.warn("⚠️ Keep-alive ping failed:", err.message);
+        }
+    }, 10 * 60 * 1000);
+}
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error("Server Error:", err);
