@@ -37,6 +37,17 @@ router.post("/", async (req, res) => {
 
                 (async () => {
                     try {
+                        // Save a minimal record first so webhook receipt is never lost.
+                        await saveLead({
+                            leadgen_id: leadgenId,
+                            created_time: change?.value?.created_time || new Date().toISOString(),
+                            raw_payload: {
+                                source: "webhook",
+                                entry_id: entry?.id || null,
+                                event: change?.value || {},
+                            },
+                        });
+
                         const lead = await getLeadDetails(leadgenId);
                         await saveLead(lead);
                         console.log(`✅ Lead saved: ${leadgenId}`);
